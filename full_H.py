@@ -1,24 +1,33 @@
 import numpy as np
+from itertools import product
 
 N = 2
 
-def testBit(int_type, offset):
-    mask = 1 << offset
-    return int_type & mask
+SPIN = [1/2, -1/2]
+ALL_STATES = list(product(SPIN, repeat=N))
+N_STATES = len(ALL_STATES)
 
-len_a = 2**N
-H = np.zeros((len_a, len_a))
+Sz = lambda state : state[0] if state[0] == state[1] else 0.0
+Sm = lambda state : 1.0 if state[1] > state[0] else 0.0
+Sp = lambda state : 1.0 if state[1] < state[0] else 0.0
 
-for a in range(len_a):
+def H_term(bra, ket):
+    term = 0.0
+    
     for i in range(N):
-        j = np.mod(i + 1, N)
+        j = (i + 1) % N
         
-        if (testBit(a, i) > 0 and testBit(a, j) > 0) or (testBit(a, i) == 0 and testBit(a, j) == 0):
-            H[a, a] += 0.25
-        else:
-            H[a, a] += - 0.25
-            b = a ^ 2**(i+j)
-            H[a, b] = 0.5
+        term += Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
+        term += 0.5 * (Sp((bra[i], ket[i])) * Sm((bra[j], ket[j])) + Sm((bra[i], ket[i])) * Sp((bra[j], ket[j])))
+    
+    return term
 
-print([bin(a)[2:] for a in range(len_a)])
-print(H)            
+H = np.zeros((N_STATES, N_STATES))
+for i, bra in enumerate(ALL_STATES):
+    for j, ket in enumerate(ALL_STATES):
+        H[i, j] = H_term(bra, ket)
+
+print(f"{ALL_STATES=}")
+print(f"{H=}")
+
+
