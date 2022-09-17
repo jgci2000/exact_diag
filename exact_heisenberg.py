@@ -22,18 +22,32 @@ Sp = lambda state : 1.0 if state[1] < state[0] else 0.0
 def H_term(bra, ket):
     term = 0.0
     
-    for i in range(N):
-        j = (i + 1) % N
-        
-        term += Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
-        term += 0.5 * (Sp((bra[i], ket[i])) * Sm((bra[j], ket[j])) + Sm((bra[i], ket[i])) * Sp((bra[j], ket[j])))
-    
+    if bra == ket:
+        for i in range(N):
+            j = (i + 1) % N
+            term += Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
+    else:        
+        for i in range(N):
+            j = (i + 1) % N
+            ket_c = list(ket)
+            
+            if Sp((bra[i], ket[i])) * Sm((bra[j], ket[j])) == 1.0:
+                ket_c[i] = 1/2
+                ket_c[j] = -1/2
+                if ket_c == list(bra):
+                    term += 0.5
+            elif Sm((bra[i], ket[i])) * Sp((bra[j], ket[j])) == 1.0:
+                ket_c[i] = -1/2
+                ket_c[j] = 1/2
+                if ket_c == list(bra):
+                    term += 0.5
+
     return term
 
 SPIN = [1/2, -1/2]
 COLOR = ["r", "b", "g", "y", "k"]
 
-for c, N in enumerate([2, 4, 6]):
+for c, N in enumerate([2, 4, 6, 8]):
     ALL_STATES = list(product(SPIN, repeat=N))
     N_STATES = len(ALL_STATES)
 
@@ -45,16 +59,6 @@ for c, N in enumerate([2, 4, 6]):
     eig_vals, eig_kets = npla.eigh(H)
     diag_H = np.diag(eig_vals)
     
-    print(f"all states: {ALL_STATES}")
-    print(f"ground state energy: {eig_vals[0]}")
-    print(f"ground state: {eig_kets[:, 0]}")
-
-    # print(pd.DataFrame(H))
-    # print(pd.DataFrame(eig_vals))
-    
-    # T = np.arange(0.01, 2.0, 0.01)
-    # T_vals = len(T)
-    # beta = 1.0 / T
     beta = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
     T_vals = len(beta)
     T = 1.0 / beta
@@ -94,6 +98,20 @@ for c, N in enumerate([2, 4, 6]):
     for i in range(T_vals):
         print(f"{beta[i]}  |  {C[i]}  |  {C_sim[i]} +/- {C_std[i]}  |  {True if (C[i] < C_sim[i] + C_std[i] and C[i] > C_sim[i] - C_std[i]) else False}")
     print()
+
+    T = np.arange(0.01, 2.0, 0.01)
+    T_vals = len(T)
+    beta = 1.0 / T
+    
+    Z = np.array([np.sum(np.exp(- beta[i] * E_vals)) for i in range(T_vals)])
+
+    E = np.array([np.sum(E_vals * np.exp(- beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
+    E2 = np.array([np.sum(E_vals**2 * np.exp(- beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
+    C = np.array([beta[i]**2 * (E2[i] - E[i]**2) for i in range(T_vals)])
+
+    E /= N
+    C /= N
+
 
     plt.figure(1, figsize=(HX, HY))
     plt.plot(T, E, "-" + COLOR[c],label=f"{N=}")
