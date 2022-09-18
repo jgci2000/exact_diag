@@ -34,12 +34,12 @@ def H_term(bra, ket):
             if Sp((bra[i], ket[i])) * Sm((bra[j], ket[j])) == 1.0:
                 ket_c[i] = 1/2
                 ket_c[j] = -1/2
-                if ket_c == list(bra):
+                if tuple(ket_c) == bra:
                     term += 0.5
             elif Sm((bra[i], ket[i])) * Sp((bra[j], ket[j])) == 1.0:
                 ket_c[i] = -1/2
                 ket_c[j] = 1/2
-                if ket_c == list(bra):
+                if tuple(ket_c) == bra:
                     term += 0.5
 
     return term
@@ -47,24 +47,22 @@ def H_term(bra, ket):
 SPIN = [1/2, -1/2]
 COLOR = ["r", "b", "g", "y", "k"]
 
-for c, N in enumerate([2]):
+for c, N in enumerate([4, 6, 8]):
     ALL_STATES = list(product(SPIN, repeat=N))
     N_STATES = len(ALL_STATES)
 
-    H = np.zeros((N_STATES, N_STATES))
+    H_matrix = np.zeros((N_STATES, N_STATES))
     for i, bra in enumerate(ALL_STATES):
         for j, ket in enumerate(ALL_STATES):
-            H[i, j] = H_term(bra, ket)
+            H_matrix[i, j] = H_term(bra, ket)
     
-    Sz = np.zeros((N_STATES, N_STATES))
+    Sz_matrix = np.zeros((N_STATES, N_STATES))
     for i in range(N_STATES):
-        Sz[i, i] = np.sum(ALL_STATES[i])
+        Sz_matrix[i, i] = np.sum(ALL_STATES[i])
 
-    for i in range(N_STATES):
-        print(f"{ALL_STATES[i]} with {Sz[i, i]}")
-
-    E_vals, U = npla.eigh(H)
-    M_vals = npla.inv(U) @ Sz @ U
+    E_vals, U = npla.eigh(H_matrix)
+    M_vals = np.diag(npla.inv(U) @ Sz_matrix @ U)
+    M2_vals = np.diag(npla.inv(U) @ np.power(Sz_matrix, 2.0) @ U)
 
     beta = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
     T_vals = len(beta)
@@ -114,7 +112,7 @@ for c, N in enumerate([2]):
     E2 = np.array([np.sum(E_vals**2 * np.exp(- beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
     C = np.array([beta[i]**2 * (E2[i] - E[i]**2) for i in range(T_vals)])
     m = np.array([np.sum(M_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
-    m2 = np.array([np.sum(M_vals**2 * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
+    m2 = np.array([np.sum(M2_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
     m_sus = np.array([beta[i] * (m2[i] - m[i]**2) for i in range(T_vals)])
 
     E /= N
