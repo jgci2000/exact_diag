@@ -3,13 +3,14 @@ import numpy.linalg as npla
 from itertools import product
 import matplotlib
 import matplotlib.pyplot as plt
-import os
+import os, sys
 import pandas as pd
 
 plt.style.use('seaborn')
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 COLOR = ["r", "b", "g", "y", "k"]
+SHOW = bool(int(sys.argv[1]))
 HX = 5
 HY = 4
 
@@ -166,6 +167,7 @@ for c, N in enumerate([4, 6, 8]):
         with open(EXACT_DIR + f"exact_N8_delta{DELTA}_h{H}.csv", "w") as file:
             file.write("beta,E,C,m,m2,m_sus\n")
             for i in range(T_vals):
-                f.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{m_sus[i]}\n")
+                file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{m_sus[i]}\n")
 
-plt.show()
+if SHOW:
+    plt.show()
