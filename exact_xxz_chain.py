@@ -9,23 +9,27 @@ import pandas as pd
 plt.style.use('seaborn')
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
+COLOR = ["r", "b", "g", "y", "k"]
 HX = 5
 HY = 4
 
 SAVEFOLDER = "figures/"
-OUTPUT_DIR = "SSE_results/"
+SSE_DIR = "sse_results/"
+EXACT_DIR = "exact_results/"
 
 Sz = lambda state : state[0] if state[0] == state[1] else 0.0
 Sm = lambda state : 1.0 if state[1] > state[0] else 0.0
 Sp = lambda state : 1.0 if state[1] < state[0] else 0.0
 
 def H_term(bra, ket):
+    field_term = 0.0
     term = 0.0
     
     if bra == ket:
         for i in range(N):
             j = (i + 1) % N
-            term += Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
+            term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
+        field_term = - H * np.sum(bra)
     else:        
         for i in range(N):
             j = (i + 1) % N
@@ -42,10 +46,12 @@ def H_term(bra, ket):
                 if tuple(ket_c) == bra:
                     term += 0.5
 
-    return term
+    return J * term + field_term
 
 SPIN = [1/2, -1/2]
-COLOR = ["r", "b", "g", "y", "k"]
+J = 1.0
+DELTA = 1.0
+H = 2.0
 
 for c, N in enumerate([4, 6, 8]):
     ALL_STATES = list(product(SPIN, repeat=N))
@@ -91,7 +97,7 @@ for c, N in enumerate([4, 6, 8]):
     m_sus_sim = np.zeros(T_vals_sim)
     m_sus_std = np.zeros(T_vals_sim)
 
-    with open(OUTPUT_DIR + f"output_N{N}.csv", "r") as f:
+    with open(SSE_DIR + f"output_N{N}_delta{DELTA}_h{H}.csv", "r") as f:
         header = f.readline()
         for j in range(T_vals_sim):
             _, _, _, _, E_sim[j], E_std[j], C_sim[j], C_std[j], m_sim[j], m_std[j], m2_sim[j], m2_std[j], _, _, ms_sim[j], ms_std[j], m2s_sim[j], m2s_std[j], _, _, m_sus_sim[j], m_sus_std[j], _, _, _, _ = [float(x) for x in f.readline().strip().split(",")]
@@ -155,5 +161,11 @@ for c, N in enumerate([4, 6, 8]):
     plt.xlabel(r"$T$")
     plt.ylabel(r"$\chi$")
     plt.legend()
+    
+    if N == 8:
+        with open(EXACT_DIR + f"exact_N8_delta{DELTA}_h{H}.csv", "w") as file:
+            file.write("beta,E,C,m,m2,m_sus\n")
+            for i in range(T_vals):
+                f.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{m_sus[i]}\n")
 
 plt.show()
