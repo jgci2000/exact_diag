@@ -2,9 +2,7 @@ import numpy as np
 import numpy.linalg as npla
 from itertools import product
 
-SAVEFOLDER = "figures/"
-SSE_DIR = "sse_results/"
-EXACT_DIR = "exact_results/"
+EXACT_DIR = "./"
 
 Sz = lambda state : state[0] if state[0] == state[1] else 0.0
 Sm = lambda state : np.sqrt(S * (S + 1) - state[1] * (state[1] - 1)) if state[1] > state[0] else 0.0
@@ -46,10 +44,12 @@ for m in range(int(2 * S + 1)):
 J = 1.0
 DELTA = 1.0
 H = 0.0
-N = 6
+N = 8
 
 ALL_STATES = list(product(SPIN, repeat=N))
 N_STATES = len(ALL_STATES)
+
+print("Creating Hamiltonian matrix")
 
 H_matrix = np.zeros((N_STATES, N_STATES))
 for i, bra in enumerate(ALL_STATES):
@@ -59,10 +59,15 @@ for i, bra in enumerate(ALL_STATES):
 Sz_matrix = np.zeros((N_STATES, N_STATES))
 for i in range(N_STATES):
     Sz_matrix[i, i] = np.sum(ALL_STATES[i])
+    
+print("Hamiltonian matrix created")
+print("Diagonalizing Hamiltonian matrix")
 
 E_vals, U = npla.eigh(H_matrix)
 M_vals = np.diag(npla.inv(U) @ Sz_matrix @ U)
 M2_vals = np.diag(npla.inv(U) @ np.power(Sz_matrix, 2.0) @ U)
+
+print("Ended diagonalization")
 
 T = np.arange(0.01, 2.0, 0.01)
 T_vals = len(T)
