@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.linalg as npla
 from itertools import product
+import sys
 
 EXACT_DIR = "./"
 
@@ -37,17 +38,20 @@ def H_term(bra, ket):
 
     return J * term + field_term
 
-S = 1
+S = float(sys.argv[1])
 SPIN = list()
 for m in range(int(2 * S + 1)):
     SPIN.append(-S + m)
 J = 1.0
-DELTA = 1.0
-H = 0.0
-N = 8
+DELTA = float(sys.argv[2])
+H = float(sys.argv[3])
+N = 4
 
 ALL_STATES = list(product(SPIN, repeat=N))
 N_STATES = len(ALL_STATES)
+stag_operator = np.zeros(N)
+for i in range(N):
+    stag_operator[i] = np.power(-1.0, i)
 
 print("Creating Hamiltonian matrix")
 
@@ -59,6 +63,10 @@ for i, bra in enumerate(ALL_STATES):
 Sz_matrix = np.zeros((N_STATES, N_STATES))
 for i in range(N_STATES):
     Sz_matrix[i, i] = np.sum(ALL_STATES[i])
+
+Szs_matrix = np.zeros((N_STATES, N_STATES))
+for i in range(N_STATES):
+    Szs_matrix[i, i] = np.sum(stag_operator * np.array(ALL_STATES[i]))
     
 print("Hamiltonian matrix created")
 print("Diagonalizing Hamiltonian matrix")
@@ -66,10 +74,12 @@ print("Diagonalizing Hamiltonian matrix")
 E_vals, U = npla.eigh(H_matrix)
 M_vals = np.diag(npla.inv(U) @ Sz_matrix @ U)
 M2_vals = np.diag(npla.inv(U) @ np.power(Sz_matrix, 2.0) @ U)
+Ms_vals = np.diag(npla.inv(U) @ Szs_matrix @ U)
+M2s_vals = np.diag(npla.inv(U) @ np.power(Szs_matrix, 2.0) @ U)
 
 print("Ended diagonalization")
 
-T = np.arange(0.01, 2.0, 0.01)
+T = np.arange(0.05, 2.0, 0.01)
 T_vals = len(T)
 beta = 1.0 / T
 
@@ -82,13 +92,19 @@ m = np.array([np.sum(M_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T
 m2 = np.array([np.sum(M2_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
 m_sus = np.array([beta[i] * (m2[i] - m[i]**2) for i in range(T_vals)])
 
+ms = np.array([np.sum(Ms_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
+m2s = np.array([np.sum(M2s_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
+
 E /= N
 C /= N
 m /= N
 m2 /= N
 m_sus /= N
 
-with open(EXACT_DIR + f"exact_N8_delta{DELTA}_h{H}.csv", "w") as file:
-    file.write("beta,E,C,m,m2,m_sus\n")
+ms /= N
+m2s /= N
+
+with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
+    file.write("beta,E,C,m,m2,ms,m2s,m_sus\n")
     for i in range(T_vals):
-        file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{m_sus[i]}\n")
+        file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{ms[i]},{m2s[i]},{m_sus[i]}\n")
