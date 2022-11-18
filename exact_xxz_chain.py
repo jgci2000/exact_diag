@@ -98,11 +98,11 @@ m2s = np.array([np.sum(M2s_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in ran
 E /= N
 C /= N
 m /= N
-m2 /= N
+m2 /= N*N
 m_sus /= N
 
 ms /= N
-m2s /= N
+m2s /= N*N
 print(E)
 with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
     file.write("beta,E,C,m,m2,ms,m2s,m_sus\n")
