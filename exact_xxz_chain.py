@@ -14,12 +14,12 @@ def H_term(bra, ket):
     term = 0.0
     
     if bra == ket:
-        for i in range(N):
+        for i in range(N-1):
             j = (i + 1) % N
             term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
         field_term = - H * np.sum(bra)
     else:        
-        for i in range(N):
+        for i in range(N-1):
             j = (i + 1) % N
             ket_c = list(ket)
             
@@ -45,7 +45,7 @@ for m in range(int(2 * S + 1)):
 J = 1.0
 DELTA = float(sys.argv[2])
 H = float(sys.argv[3])
-N = 4
+N = 6
 
 ALL_STATES = list(product(SPIN, repeat=N))
 N_STATES = len(ALL_STATES)
@@ -103,7 +103,7 @@ m_sus /= N
 
 ms /= N
 m2s /= N
-
+print(E)
 with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
     file.write("beta,E,C,m,m2,ms,m2s,m_sus\n")
     for i in range(T_vals):
