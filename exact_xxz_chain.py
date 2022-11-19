@@ -72,10 +72,11 @@ print("Hamiltonian matrix created")
 print("Diagonalizing Hamiltonian matrix")
 
 E_vals, U = npla.eigh(H_matrix)
-M_vals = np.diag(npla.inv(U) @ Sz_matrix @ U)
-M2_vals = np.diag(npla.inv(U) @ np.power(Sz_matrix, 2.0) @ U)
-Ms_vals = np.diag(npla.inv(U) @ Szs_matrix @ U)
-M2s_vals = np.diag(npla.inv(U) @ np.power(Szs_matrix, 2.0) @ U)
+U_inv = npla.inv(U)
+M_vals = np.diag(U_inv @ Sz_matrix @ U)
+M2_vals = np.diag(U_inv @  np.power(Sz_matrix, 2.0) @ U)
+Ms_vals = np.diag(U_inv @ Szs_matrix @ U)
+M2s_vals = np.diag(U_inv @ np.power(Szs_matrix, 2.0) @ U)
 
 print("Ended diagonalization")
 
@@ -103,8 +104,50 @@ m_sus /= N
 
 ms /= N
 m2s /= N*N
-print(E)
+
+print("Starting to compute spin conductivity")
+# g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_y P_x(\tau)>
+k_max = 5
+x = N//2 - 1
+y = x
+
+Px = np.zeros((N_STATES, N_STATES))
+Py = np.zeros((N_STATES, N_STATES))
+for i in range(N_STATES):
+    Px[i, i] = np.sum(ALL_STATES[i][x:])
+    Py[i, i] = np.sum(ALL_STATES[i][y:])
+
+H_matrix_diag = U_inv @ H_matrix @ U
+Px_vals = U_inv @ Px @ U
+Py_vals = U_inv @ Py @ U
+Px_vals_tau = lambda tau: np.exp(tau * H_matrix_diag) @ Px_vals @ np.exp(-tau * H_matrix_diag)
+
+w_k = np.zeros((T_vals, k_max))
+g_spin = np.zeros((T_vals, k_max))
+
+for k in range(1, k_max + 1):
+    for j in range(T_vals):
+        w_k[j, k - 1] = 2.0 * np.pi * k / beta[j]
+
+        z = np.sum(np.exp(- beta[j] * E_vals))
+        tau = np.arange(0.0, beta[j], 0.01)
+        integral = np.zeros(len(tau))
+
+        for i in range(len(tau)):
+            integral[i] = np.cos(w_k[j, k - 1] * tau[i]) * np.sum(np.diag(Py_vals @ Px_vals_tau(tau[i])) * np.exp(- beta[j] * E_vals)) / z
+        integral = np.trapz(integral, tau)
+        
+        g_spin[j, k - 1] = w_k[j, k - 1] * integral
+print("Spin conductivity computed")
+
 with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
     file.write("beta,E,C,m,m2,ms,m2s,m_sus\n")
     for i in range(T_vals):
         file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{ms[i]},{m2s[i]},{m_sus[i]}\n")
+    
+    for i in range(T_vals):
+        file.write("beta\n")
+        file.write(f"{beta[i]}\n")
+        file.write("w_k,g_spin\n")
+        for k in range(k_max):
+            file.write(f"{w_k[j, k]},{g_spin[j, k]}\n")
