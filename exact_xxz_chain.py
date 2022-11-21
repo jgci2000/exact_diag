@@ -100,7 +100,7 @@ E /= N
 C /= N
 m /= N
 m2 /= N*N
-m_sus /= N
+m_sus /= N*N
 
 ms /= N
 m2s /= N*N
@@ -108,8 +108,8 @@ m2s /= N*N
 print("Starting to compute spin conductivity")
 # g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_y P_x(\tau)>
 k_max = 5
-x = N//2 - 1
-y = x
+x = 2
+y = 2
 
 Px = np.zeros((N_STATES, N_STATES))
 Py = np.zeros((N_STATES, N_STATES))
@@ -120,24 +120,27 @@ for i in range(N_STATES):
 H_matrix_diag = U_inv @ H_matrix @ U
 Px_vals = U_inv @ Px @ U
 Py_vals = U_inv @ Py @ U
-Px_vals_tau = lambda tau: np.exp(tau * H_matrix_diag) @ Px_vals @ np.exp(-tau * H_matrix_diag)
+Px_vals_tau = lambda tau: np.exp(tau * H_matrix_diag) @ Px_vals @ np.exp(- tau * H_matrix_diag)
+Py_vals_tau = lambda tau: np.exp(tau * H_matrix_diag) @ Py_vals @ np.exp(- tau * H_matrix_diag)
 
-w_k = np.zeros((T_vals, k_max))
-g_spin = np.zeros((T_vals, k_max))
+beta_k = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
+beta_k_vals = len(beta_k)
+w_k = np.zeros((beta_k_vals, k_max))
+g_spin = np.zeros((beta_k_vals, k_max))
 
-for k in range(1, k_max + 1):
-    for j in range(T_vals):
-        w_k[j, k - 1] = 2.0 * np.pi * k / beta[j]
+Z = np.array([np.sum(np.exp(- beta_k[j] * E_vals)) for j in range(beta_k_vals)])
 
-        z = np.sum(np.exp(- beta[j] * E_vals))
-        tau = np.arange(0.0, beta[j], 0.01)
-        integral = np.zeros(len(tau))
-
-        for i in range(len(tau)):
-            integral[i] = np.cos(w_k[j, k - 1] * tau[i]) * np.sum(np.diag(Py_vals @ Px_vals_tau(tau[i])) * np.exp(- beta[j] * E_vals)) / z
-        integral = np.trapz(integral, tau)
+for j in range(beta_k_vals):
+    for k in range(1, k_max + 1):
+        w_k[j, k - 1] = 2.0 * np.pi * k / beta_k[j]
         
-        g_spin[j, k - 1] = w_k[j, k - 1] * integral
+        tau = np.linspace(0.0, beta_k[j], 10_000)
+        integral = np.zeros(len(tau))
+        for i in range(len(tau)):
+            integral[i] = np.cos(w_k[j, k - 1] * tau[i]) * np.sum(np.diag(Px_vals @ Py_vals_tau(tau[i])) * np.exp(- beta_k[j] * E_vals)) / Z[j]
+
+        g_spin[j, k - 1] = w_k[j, k - 1] * np.trapz(integral, tau)
+
 print("Spin conductivity computed")
 
 with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
@@ -145,9 +148,9 @@ with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
     for i in range(T_vals):
         file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{ms[i]},{m2s[i]},{m_sus[i]}\n")
     
-    for i in range(T_vals):
+    for i in range(len(beta_k)):
         file.write("beta\n")
-        file.write(f"{beta[i]}\n")
+        file.write(f"{beta_k[i]}\n")
         file.write("w_k,g_spin\n")
         for k in range(k_max):
-            file.write(f"{w_k[j, k]},{g_spin[j, k]}\n")
+            file.write(f"{w_k[i, k]},{g_spin[i, k]}\n")
