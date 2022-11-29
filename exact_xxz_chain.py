@@ -2,6 +2,7 @@ import numpy as np
 import numpy.linalg as npla
 from itertools import product
 import sys
+import matplotlib.pyplot as plt
 
 EXACT_DIR = "./"
 
@@ -106,7 +107,9 @@ ms /= N
 m2s /= N*N
 
 print("Starting to compute spin conductivity")
-# g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_y P_x(\tau)>
+# g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_x(\tau) P_y>
+# g(\omega_k) = \omega_m \beta \int_{0}^{1} dx \cos(\omega_k \beta x) <P_x(x \beta) P_y>
+
 k_max = 5
 x = 2
 y = 2
@@ -120,8 +123,6 @@ for i in range(N_STATES):
 H_matrix_diag = U_inv @ H_matrix @ U
 Px_vals = U_inv @ Px @ U
 Py_vals = U_inv @ Py @ U
-Px_vals_tau = lambda tau: np.exp(tau * H_matrix_diag) @ Px_vals @ np.exp(- tau * H_matrix_diag)
-Py_vals_tau = lambda tau: np.exp(tau * H_matrix_diag) @ Py_vals @ np.exp(- tau * H_matrix_diag)
 
 beta_k = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
 beta_k_vals = len(beta_k)
@@ -134,12 +135,13 @@ for j in range(beta_k_vals):
     for k in range(1, k_max + 1):
         w_k[j, k - 1] = 2.0 * np.pi * k / beta_k[j]
         
-        tau = np.linspace(0.0, beta_k[j], 10_000)
-        integral = np.zeros(len(tau))
-        for i in range(len(tau)):
-            integral[i] = np.cos(w_k[j, k - 1] * tau[i]) * np.sum(np.diag(Px_vals @ Py_vals_tau(tau[i])) * np.exp(- beta_k[j] * E_vals)) / Z[j]
+        for i in range(N_STATES):
+            for l in range(N_STATES):
+                c = Px_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                dE = E_vals[i] - E_vals[l]
+                g_spin[j, k - 1] += c * dE / (w_k[j, k - 1]**2 + dE**2)
 
-        g_spin[j, k - 1] = w_k[j, k - 1] * np.trapz(integral, tau)
+        g_spin[j, k - 1] = g_spin[j, k - 1] * w_k[j, k - 1] / Z[j]
 
 print("Spin conductivity computed")
 
