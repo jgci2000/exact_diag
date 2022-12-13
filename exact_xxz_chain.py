@@ -4,23 +4,21 @@ from itertools import product
 import sys
 import matplotlib.pyplot as plt
 
-EXACT_DIR = "./"
-
 Sz = lambda state : state[0] if state[0] == state[1] else 0.0
 Sm = lambda state : np.sqrt(S * (S + 1) - state[1] * (state[1] - 1)) if state[1] > state[0] else 0.0
 Sp = lambda state : np.sqrt(S * (S + 1) - state[1] * (state[1] + 1)) if state[1] < state[0] else 0.0
 
-def H_term(bra, ket):
+def H_term(bra, ket, bc):
     field_term = 0.0
     term = 0.0
     
     if bra == ket:
-        for i in range(N-1):
+        for i in range(N - bc):
             j = (i + 1) % N
             term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
         field_term = - H * np.sum(bra)
     else:        
-        for i in range(N-1):
+        for i in range(N - bc):
             j = (i + 1) % N
             ket_c = list(ket)
             
@@ -48,6 +46,11 @@ DELTA = float(sys.argv[2])
 H = float(sys.argv[3])
 N = 6
 
+BC = int(sys.argv[4])
+x = int(sys.argv[5])
+y = int(sys.argv[6])
+k_max = 5
+
 ALL_STATES = list(product(SPIN, repeat=N))
 N_STATES = len(ALL_STATES)
 stag_operator = np.zeros(N)
@@ -59,7 +62,7 @@ print("Creating Hamiltonian matrix")
 H_matrix = np.zeros((N_STATES, N_STATES))
 for i, bra in enumerate(ALL_STATES):
     for j, ket in enumerate(ALL_STATES):
-        H_matrix[i, j] = H_term(bra, ket)
+        H_matrix[i, j] = H_term(bra, ket, BC)
 
 Sz_matrix = np.zeros((N_STATES, N_STATES))
 for i in range(N_STATES):
@@ -110,10 +113,6 @@ print("Starting to compute spin conductivity")
 # g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_x(\tau) P_y>
 # g(\omega_k) = \omega_m \beta \int_{0}^{1} dx \cos(\omega_k \beta x) <P_x(x \beta) P_y>
 
-k_max = 5
-x = 2
-y = 2
-
 Px = np.zeros((N_STATES, N_STATES))
 Py = np.zeros((N_STATES, N_STATES))
 for i in range(N_STATES):
@@ -145,7 +144,25 @@ for j in range(beta_k_vals):
 
 print("Spin conductivity computed")
 
-with open(EXACT_DIR + f"exact_N{N}_S{S}_delta{DELTA}_h{H}.csv", "w") as file:
+if BC == 0:
+    tmp2 = "PBC"
+elif BC == 1:
+    tmp2 = "OBC"
+
+if DELTA == 0:
+    filename = f"exact_L{N}_{tmp2}_XY_S{S}_h{H}_x{x}_y{y}.csv"
+elif J > 0:
+    filename = f"exact_L{N}_{tmp2}_AFM_S{S}_delta{DELTA}_h{H}_x{x}_y{y}.csv"
+elif J < 0: 
+    filename = f"exact_L{N}_{tmp2}_FM_S{S}_delta{DELTA}_h{H}_x{x}_y{y}.csv"
+
+with open(filename, "w") as file:
+    file.write("L,boundary_cond,S,delta,h\n")
+    file.write(f"{N},{tmp2},{S},{DELTA},{H}\n")
+    
+    file.write("n_betas,n_betas_k,n_k,x,y\n")
+    file.write(f"{T_vals},{beta_k_vals},{k_max},{x},{y}\n")
+    
     file.write("beta,E,C,m,m2,ms,m2s,m_sus\n")
     for i in range(T_vals):
         file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{ms[i]},{m2s[i]},{m_sus[i]}\n")
