@@ -8,17 +8,17 @@ Sz = lambda state : state[0] if state[0] == state[1] else 0.0
 Sm = lambda state : np.sqrt(S * (S + 1) - state[1] * (state[1] - 1)) if state[1] > state[0] else 0.0
 Sp = lambda state : np.sqrt(S * (S + 1) - state[1] * (state[1] + 1)) if state[1] < state[0] else 0.0
 
-def H_term(bra, ket, bc):
+def H_term(bra, ket, bc, start):
     field_term = 0.0
     term = 0.0
     
     if bra == ket:
-        for i in range(len(bra) - bc):
+        for i in range(start, len(bra) - bc):
             j = (i + 1) % len(bra)
             term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
         field_term = - H * np.sum(bra)
     else:
-        for i in range(len(bra) - bc):
+        for i in range(start, len(bra) - bc):
             j = (i + 1) % len(bra)
             ket_c = list(ket)
             
@@ -64,7 +64,7 @@ print("Creating Hamiltonian matrix")
 H_matrix = np.zeros((N_STATES, N_STATES))
 for i, bra in enumerate(ALL_STATES):
     for j, ket in enumerate(ALL_STATES):
-        H_matrix[i, j] = H_term(bra, ket, BC)
+        H_matrix[i, j] = H_term(bra, ket, BC, 0)
 
 Sz_matrix = np.zeros((N_STATES, N_STATES))
 for i in range(N_STATES):
@@ -126,9 +126,9 @@ if BC == 1:
     Py_prime = np.zeros((N_STATES, N_STATES))
     for i, bra in enumerate(ALL_STATES):
         for j, ket in enumerate(ALL_STATES):
-            Px_prime[i, j] = H_term(bra[x:], ket[x:], 1)
-            Py_prime[i, j] = H_term(bra[y:], ket[y:], 1)
-            
+            Px_prime[i, j] = H_term(bra, ket, 1, x)
+            Py_prime[i, j] = H_term(bra, ket, 1, y)
+
     Px_vals = U_inv @ Px @ U
     Py_vals = U_inv @ Py @ U
     Px_prime_vals = U_inv @ Px_prime @ U
