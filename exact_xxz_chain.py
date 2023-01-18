@@ -154,8 +154,6 @@ if BC == 1:
                     g_spin[j, k - 1] += c_spin * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j])
                     g_heat[j, k - 1] += c_heat * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j])
 
-    print(g_spin[1, 0], g_heat[1, 0])
-    print(g_spin[6, 0], g_heat[6, 0])
     print("Conductances computed")
 
 if BC == 0:
