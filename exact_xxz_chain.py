@@ -50,7 +50,7 @@ BC = int(sys.argv[4])
 x = int(sys.argv[5])
 y = int(sys.argv[6])
 k_max = 5
-beta_k = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0])
+beta_k = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0])
 beta_k_vals = len(beta_k)
 
 ALL_STATES = list(product(SPIN, repeat=N))
@@ -139,20 +139,23 @@ if BC == 1:
     g_heat = np.zeros((beta_k_vals, k_max))
 
     Z = np.array([np.sum(np.exp(- beta_k[j] * E_vals)) for j in range(beta_k_vals)])
+    
+    c_spin = np.zeros((N_STATES, N_STATES))
+    c_heat = np.zeros((N_STATES, N_STATES))
+    dE = np.zeros((N_STATES, N_STATES))
 
     for j in range(beta_k_vals):
+        for i in range(N_STATES):
+            for l in range(N_STATES):
+                c_spin[i, l] = Px_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                c_heat[i, l] = Px_prime_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                dE[i, l] = E_vals[i] - E_vals[l]
+        
         for k in range(1, k_max + 1):
             w_k[j, k - 1] = 2.0 * np.pi * k / beta_k[j]
             
-            for i in range(N_STATES):
-                for l in range(N_STATES):
-                    c_spin = Px_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
-                    c_heat = Px_prime_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
-
-                    dE = E_vals[i] - E_vals[l]
-                    
-                    g_spin[j, k - 1] += c_spin * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j])
-                    g_heat[j, k - 1] += c_heat * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j])
+            g_spin[j, k - 1] = np.sum(c_spin * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
+            g_heat[j, k - 1] = np.sum(c_heat * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
 
     print("Conductances computed")
 
