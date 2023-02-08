@@ -119,15 +119,15 @@ if BC == 1:
     Px = np.zeros((N_STATES, N_STATES))
     Py = np.zeros((N_STATES, N_STATES))
     for i in range(N_STATES):
-        Px[i, i] = np.sum(ALL_STATES[i][x:])
-        Py[i, i] = np.sum(ALL_STATES[i][y:])
+        Px[i, i] = np.sum(ALL_STATES[i][x+1:])
+        Py[i, i] = np.sum(ALL_STATES[i][y+1:])
     
     Px_prime = np.zeros((N_STATES, N_STATES))
     Py_prime = np.zeros((N_STATES, N_STATES))
     for i, bra in enumerate(ALL_STATES):
         for j, ket in enumerate(ALL_STATES):
-            Px_prime[i, j] = H_term(bra, ket, 1, x)
-            Py_prime[i, j] = H_term(bra, ket, 1, y)
+            Px_prime[i, j] = H_term(bra, ket, 1, x+1)
+            Py_prime[i, j] = H_term(bra, ket, 1, y+1)
 
     Px_vals = U_inv @ Px @ U
     Py_vals = U_inv @ Py @ U
