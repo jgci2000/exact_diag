@@ -80,33 +80,47 @@ print("Diagonalizing Hamiltonian matrix")
 E_vals, U = npla.eigh(H_matrix)
 U_inv = npla.inv(U)
 M_vals = np.diag(U_inv @ Sz_matrix @ U)
-M2_vals = np.diag(U_inv @  np.power(Sz_matrix, 2.0) @ U)
+M2_vals = np.diag(U_inv @ np.power(Sz_matrix, 2.0) @ U)
 Ms_vals = np.diag(U_inv @ Szs_matrix @ U)
 M2s_vals = np.diag(U_inv @ np.power(Szs_matrix, 2.0) @ U)
 
 print("Ended diagonalization")
 
-T = np.arange(0.05, 2.0, 0.01)
+T = np.arange(0.005, 2.0 + 0.0001, 0.0001)
 T_vals = len(T)
 beta = 1.0 / T
 
-Z = np.array([np.sum(np.exp(- beta[i] * E_vals)) for i in range(T_vals)])
+ln_Z = np.zeros(T_vals)
+ln_ZE = np.zeros((len(E_vals), T_vals))
 
-E = np.array([np.sum(E_vals * np.exp(- beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
-E2 = np.array([np.sum(E_vals**2 * np.exp(- beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
+E = np.zeros(T_vals)
+E2 = np.zeros(T_vals)
+m = np.zeros(T_vals)
+m2 = np.zeros(T_vals)
+ms = np.zeros(T_vals)
+m2s = np.zeros(T_vals)
+
+for i, b in enumerate(beta):
+    ln_Z[i] = -b * E_vals[0]
+    ln_Z[i] += np.log(1 + np.sum(np.exp(-b * (E_vals[1:] - E_vals[0]))))
+    
+    ln_ZE[:, i] = -b * E_vals
+
+    E[i] = np.sum(E_vals * np.exp(ln_ZE[:, i] - ln_Z[i]))
+    E2[i] = np.sum(E_vals**2 * np.exp(ln_ZE[:, i] - ln_Z[i]))
+    m[i] = np.sum(M_vals * np.exp(ln_ZE[:, i] - ln_Z[i]))
+    m2[i] = np.sum(M2_vals * np.exp(ln_ZE[:, i] - ln_Z[i]))
+    ms[i] = np.sum(Ms_vals * np.exp(ln_ZE[:, i] - ln_Z[i]))
+    m2s[i] = np.sum(M2s_vals * np.exp(ln_ZE[:, i] - ln_Z[i]))
+
 C = np.array([beta[i]**2 * (E2[i] - E[i]**2) for i in range(T_vals)])
-m = np.array([np.sum(M_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
-m2 = np.array([np.sum(M2_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
 m_sus = np.array([beta[i] * (m2[i] - m[i]**2) for i in range(T_vals)])
-
-ms = np.array([np.sum(Ms_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
-m2s = np.array([np.sum(M2s_vals * np.exp(-beta[i] * E_vals)) / Z[i] for i in range(T_vals)])
 
 E /= N
 C /= N
 m /= N
 m2 /= N*N
-m_sus /= N*N
+m_sus /= N
 
 ms /= N
 m2s /= N*N
@@ -137,11 +151,13 @@ if BC == 1:
     w_k = np.zeros((beta_k_vals, k_max))
     g_spin = np.zeros((beta_k_vals, k_max))
     g_heat = np.zeros((beta_k_vals, k_max))
+    # g_m = np.zeros((beta_k_vals, k_max))
 
     Z = np.array([np.sum(np.exp(- beta_k[j] * E_vals)) for j in range(beta_k_vals)])
     
     c_spin = np.zeros((N_STATES, N_STATES))
     c_heat = np.zeros((N_STATES, N_STATES))
+    # c_m = np.zeros((N_STATES, N_STATES))
     dE = np.zeros((N_STATES, N_STATES))
 
     for j in range(beta_k_vals):
@@ -149,6 +165,7 @@ if BC == 1:
             for l in range(N_STATES):
                 c_spin[i, l] = Px_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
                 c_heat[i, l] = Px_prime_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                # c_m[i, l] = Px_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
                 dE[i, l] = E_vals[i] - E_vals[l]
         
         for k in range(1, k_max + 1):
@@ -156,25 +173,28 @@ if BC == 1:
             
             g_spin[j, k - 1] = np.sum(c_spin * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
             g_heat[j, k - 1] = np.sum(c_heat * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
+            # g_m[j, k - 1] = np.sum(c_m * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
 
     print("Conductances computed")
+
+    # print(g_m)
 
 if BC == 0:
     tmp2 = "PBC"
     if DELTA == 0:
         filename = f"exact_L{N}_{tmp2}_XY_S{S}_h{H}.csv"
-    elif J > 0:
+    elif DELTA > 0:
         filename = f"exact_L{N}_{tmp2}_AFM_S{S}_delta{DELTA}_h{H}.csv"
-    elif J < 0: 
-        filename = f"exact_L{N}_{tmp2}_FM_S{S}_delta{DELTA}_h{H}.csv"
+    elif DELTA < 0: 
+        filename = f"exact_L{N}_{tmp2}_FM_S{S}_delta{np.abs(DELTA)}_h{H}.csv"
 elif BC == 1:
     tmp2 = "OBC"
     if DELTA == 0:
         filename = f"exact_L{N}_{tmp2}_XY_S{S}_h{H}_x{x}_y{y}.csv"
-    elif J > 0:
+    elif DELTA > 0:
         filename = f"exact_L{N}_{tmp2}_AFM_S{S}_delta{DELTA}_h{H}_x{x}_y{y}.csv"
-    elif J < 0: 
-        filename = f"exact_L{N}_{tmp2}_FM_S{S}_delta{DELTA}_h{H}_x{x}_y{y}.csv"
+    elif DELTA < 0: 
+        filename = f"exact_L{N}_{tmp2}_FM_S{S}_delta{np.abs(DELTA)}_h{H}_x{x}_y{y}.csv"
 
 with open(filename, "w") as file:
     file.write("L,boundary_cond,S,delta,h\n")
