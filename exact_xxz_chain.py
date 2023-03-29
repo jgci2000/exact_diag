@@ -49,8 +49,8 @@ N = 6
 BC = int(sys.argv[4])
 x = int(sys.argv[5])
 y = int(sys.argv[6])
-k_max = 5
-beta_k = np.array([0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0])
+k_max = 10
+beta_k = np.array([1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0])
 beta_k_vals = len(beta_k)
 
 ALL_STATES = list(product(SPIN, repeat=N))
@@ -86,7 +86,8 @@ M2s_vals = np.diag(U_inv @ np.power(Szs_matrix, 2.0) @ U)
 
 print("Ended diagonalization")
 
-T = np.arange(0.005, 2.0 + 0.0001, 0.0001)
+#T = np.arange(0.005, 2.0 + 0.0001, 0.0001)
+T = np.array([1.0, 0.5, 0.25, 0.25/2, 0.25/4, 0.25/8, 0.25/16, 0.25/32])
 T_vals = len(T)
 beta = 1.0 / T
 
@@ -126,7 +127,7 @@ ms /= N
 m2s /= N*N
 
 if BC == 1:
-    print("Starting to compute spin and heat conductances")
+    print("Starting to compute kinetic coefficients")
     # g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_x(\tau) P_y>
     # g(\omega_k) = \omega_m \beta \int_{0}^{1} dx \cos(\omega_k \beta x) <P_x(x \beta) P_y>
 
@@ -149,35 +150,37 @@ if BC == 1:
     Py_prime_vals = U_inv @ Py_prime @ U
     
     w_k = np.zeros((beta_k_vals, k_max))
-    g_spin = np.zeros((beta_k_vals, k_max))
-    g_heat = np.zeros((beta_k_vals, k_max))
-    # g_m = np.zeros((beta_k_vals, k_max))
+    L_ss = np.zeros((beta_k_vals, k_max))
+    L_hh = np.zeros((beta_k_vals, k_max))
+    L_sh = np.zeros((beta_k_vals, k_max))
+    L_hs = np.zeros((beta_k_vals, k_max))
 
     Z = np.array([np.sum(np.exp(- beta_k[j] * E_vals)) for j in range(beta_k_vals)])
     
-    c_spin = np.zeros((N_STATES, N_STATES))
-    c_heat = np.zeros((N_STATES, N_STATES))
-    # c_m = np.zeros((N_STATES, N_STATES))
+    c_ss = np.zeros((N_STATES, N_STATES))
+    c_hh = np.zeros((N_STATES, N_STATES))
+    c_sh = np.zeros((N_STATES, N_STATES))
+    c_hs = np.zeros((N_STATES, N_STATES))
     dE = np.zeros((N_STATES, N_STATES))
 
     for j in range(beta_k_vals):
         for i in range(N_STATES):
             for l in range(N_STATES):
-                c_spin[i, l] = Px_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
-                c_heat[i, l] = Px_prime_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
-                # c_m[i, l] = Px_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                c_ss[i, l] = Px_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                c_hh[i, l] = Px_prime_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                c_sh[i, l] = Px_vals[i, l] * Py_prime_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
+                c_hs[i, l] = Px_prime_vals[i, l] * Py_vals[l, i] * (np.exp(- beta_k[j] * E_vals[l]) - np.exp(- beta_k[j] * E_vals[i]))
                 dE[i, l] = E_vals[i] - E_vals[l]
         
         for k in range(1, k_max + 1):
             w_k[j, k - 1] = 2.0 * np.pi * k / beta_k[j]
             
-            g_spin[j, k - 1] = np.sum(c_spin * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
-            g_heat[j, k - 1] = np.sum(c_heat * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
-            # g_m[j, k - 1] = np.sum(c_m * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
+            L_ss[j, k - 1] = np.sum(c_ss * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
+            L_hh[j, k - 1] = np.sum(c_hh * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
+            L_sh[j, k - 1] = np.sum(c_sh * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
+            L_hs[j, k - 1] = np.sum(c_hs * dE * w_k[j, k - 1] / ((w_k[j, k - 1]**2 + dE**2) * Z[j]))
 
-    print("Conductances computed")
-
-    # print(g_m)
+    print("Kinetic coefficients computed")
 
 if BC == 0:
     tmp2 = "PBC"
@@ -211,13 +214,27 @@ with open(filename, "w") as file:
         for i in range(len(beta_k)):
             file.write("beta\n")
             file.write(f"{beta_k[i]}\n")
-            file.write("w_k,g_spin\n")
+            file.write("w_k,L_SS\n")
             for k in range(k_max):
-                file.write(f"{w_k[i, k]},{g_spin[i, k]}\n")
+                file.write(f"{w_k[i, k]},{L_ss[i, k]}\n")
         
         for i in range(len(beta_k)):
             file.write("beta\n")
             file.write(f"{beta_k[i]}\n")
-            file.write("w_k,g_heat\n")
+            file.write("w_k,L_HH\n")
             for k in range(k_max):
-                file.write(f"{w_k[i, k]},{g_heat[i, k]}\n")
+                file.write(f"{w_k[i, k]},{L_hh[i, k]}\n")
+
+        for i in range(len(beta_k)):
+            file.write("beta\n")
+            file.write(f"{beta_k[i]}\n")
+            file.write("w_k,L_SH\n")
+            for k in range(k_max):
+                file.write(f"{w_k[i, k]},{L_sh[i, k]}\n")
+        
+        for i in range(len(beta_k)):
+            file.write("beta\n")
+            file.write(f"{beta_k[i]}\n")
+            file.write("w_k,L_HS\n")
+            for k in range(k_max):
+                file.write(f"{w_k[i, k]},{L_hs[i, k]}\n")
