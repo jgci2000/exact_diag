@@ -15,7 +15,7 @@ def H_term(bra, ket, bc, start):
     if bra == ket:
         for i in range(start, len(bra) - bc):
             j = (i + 1) % len(bra)
-            term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j])) - H * (Sz((bra[i], ket[i])) + Sz((bra[j], ket[j]))) / 2
+            term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j])) + H * (Sz((bra[i], ket[i]))**2 + Sz((bra[j], ket[j]))**2) / 2
         # if start == 0:
         #     term += - H * Sz((bra[0], ket[0])) / 2
         # term += - H * Sz((bra[-1], ket[-1])) / 2
@@ -129,7 +129,7 @@ m_sus /= N
 ms /= N
 m2s /= N*N
 
-if BC == 1:
+if BC == 1 and False:
     print("Starting to compute kinetic coefficients")
     # g(\omega_k) = \omega_m \int_{0}^{\beta} d\tau \cos(\omega_k \tau) <P_x(\tau) P_y>
     # g(\omega_k) = \omega_m \beta \int_{0}^{1} dx \cos(\omega_k \beta x) <P_x(x \beta) P_y>
@@ -213,7 +213,7 @@ with open(filename, "w") as file:
     for i in range(T_vals):
         file.write(f"{beta[i]},{E[i]},{C[i]},{m[i]},{m2[i]},{ms[i]},{m2s[i]},{m_sus[i]}\n")
 
-    if BC == 1:
+    if BC == 1 and False:
         for i in range(len(beta_k)):
             file.write("beta\n")
             file.write(f"{beta_k[i]}\n")
