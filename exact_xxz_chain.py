@@ -15,8 +15,11 @@ def H_term(bra, ket, bc, start):
     if bra == ket:
         for i in range(start, len(bra) - bc):
             j = (i + 1) % len(bra)
-            term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j]))
-        field_term = - H * np.sum(bra)
+            term += DELTA * Sz((bra[i], ket[i])) * Sz((bra[j], ket[j])) - H * (Sz((bra[i], ket[i])) + Sz((bra[j], ket[j]))) / 2
+        # if start == 0:
+        #     term += - H * Sz((bra[0], ket[0])) / 2
+        # term += - H * Sz((bra[-1], ket[-1])) / 2
+        # field_term = - H * np.sum(bra[start:])
     else:
         for i in range(start, len(bra) - bc):
             j = (i + 1) % len(bra)
@@ -49,7 +52,7 @@ N = 6
 BC = int(sys.argv[4])
 x = int(sys.argv[5])
 y = int(sys.argv[6])
-k_max = 10
+k_max = 30
 beta_k = np.array([1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0])
 beta_k_vals = len(beta_k)
 
